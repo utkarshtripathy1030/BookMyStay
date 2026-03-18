@@ -1,0 +1,129 @@
+import java.io.*;
+import java.util.*;
+
+class Reservation implements Serializable {
+    private String reservationId;
+    private String roomType;
+
+    public Reservation(String reservationId, String roomType) {
+        this.reservationId = reservationId;
+        this.roomType = roomType;
+    }
+
+    public String getReservationId() {
+        return reservationId;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+}
+
+class Inventory implements Serializable {
+    private Map<String, Integer> rooms = new HashMap<>();
+
+    public void addRoom(String type, int count) {
+        rooms.put(type, count);
+    }
+
+    public Map<String, Integer> getRooms() {
+        return rooms;
+    }
+
+    public void display() {
+        System.out.println("Inventory: " + rooms);
+    }
+}
+
+class BookingHistory implements Serializable {
+    private List<Reservation> history = new ArrayList<>();
+
+    public void add(Reservation r) {
+        history.add(r);
+    }
+
+    public List<Reservation> getAll() {
+        return history;
+    }
+
+    public void display() {
+        System.out.println("Booking History:");
+        for (Reservation r : history) {
+            System.out.println(r.getReservationId() + " - " + r.getRoomType());
+        }
+    }
+}
+
+class SystemState implements Serializable {
+    Inventory inventory;
+    BookingHistory history;
+
+    public SystemState(Inventory inventory, BookingHistory history) {
+        this.inventory = inventory;
+        this.history = history;
+    }
+}
+
+class PersistenceService {
+
+    private static final String FILE_NAME = "system_state.ser";
+
+    // Save state
+    public void save(SystemState state) {
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
+            out.writeObject(state);
+            System.out.println("System state saved successfully.");
+        } catch (IOException e) {
+            System.out.println("Error saving state: " + e.getMessage());
+        }
+    }
+
+    // Load state
+    public SystemState load() {
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(FILE_NAME))) {
+            SystemState state = (SystemState) in.readObject();
+            System.out.println("System state loaded successfully.");
+            return state;
+        } catch (Exception e) {
+            System.out.println("No previous state found. Starting fresh.");
+            return null;
+        }
+    }
+}
+
+public class BookMyStayApp {
+
+    public static void main(String[] args) {
+
+        PersistenceService service = new PersistenceService();
+
+        // Try loading previous state
+        SystemState state = service.load();
+
+        Inventory inventory;
+        BookingHistory history;
+
+        if (state != null) {
+            inventory = state.inventory;
+            history = state.history;
+        } else {
+            // Fresh start
+            inventory = new Inventory();
+            inventory.addRoom("Single", 2);
+            inventory.addRoom("Suite", 1);
+
+            history = new BookingHistory();
+        }
+
+        // Simulate booking
+        history.add(new Reservation("R1", "Single"));
+        history.add(new Reservation("R2", "Suite"));
+
+        // Display current state
+        inventory.display();
+        history.display();
+
+        // Save before shutdown
+        service.save(new SystemState(inventory, history));
+    }
+}

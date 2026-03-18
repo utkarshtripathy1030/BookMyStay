@@ -1,0 +1,104 @@
+import java.util.*;
+
+class Reservation {
+    private String reservationId;
+    private String roomType;
+
+    public Reservation(String reservationId, String roomType) {
+        this.reservationId = reservationId;
+        this.roomType = roomType;
+    }
+
+    public String getReservationId() {
+        return reservationId;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+}
+
+class Inventory {
+    private Map<String, Integer> rooms = new HashMap<>();
+
+    public void addRoom(String type, int count) {
+        rooms.put(type, count);
+    }
+
+    public void increment(String type) {
+        rooms.put(type, rooms.getOrDefault(type, 0) + 1);
+    }
+
+    public void display() {
+        System.out.println("\nCurrent Inventory:");
+        for (String type : rooms.keySet()) {
+            System.out.println(type + " : " + rooms.get(type));
+        }
+    }
+}
+
+class BookingHistory {
+    private Map<String, Reservation> history = new HashMap<>();
+
+    public void addReservation(Reservation r) {
+        history.put(r.getReservationId(), r);
+    }
+
+    public Reservation getReservation(String id) {
+        return history.get(id);
+    }
+
+    public void removeReservation(String id) {
+        history.remove(id);
+    }
+}
+
+class CancellationService {
+
+    private Stack<String> rollbackStack = new Stack<>();
+
+    public void cancelBooking(String reservationId, BookingHistory history, Inventory inventory) {
+
+        Reservation r = history.getReservation(reservationId);
+
+        if (r == null) {
+            System.out.println("Cancellation Failed: Reservation not found!");
+            return;
+        }
+
+        rollbackStack.push(reservationId);
+
+        inventory.increment(r.getRoomType());
+
+        history.removeReservation(reservationId);
+
+        System.out.println("Booking Cancelled: " + reservationId);
+    }
+
+    public void showRollbackStack() {
+        System.out.println("\nRollback Stack (Recent Cancellations): " + rollbackStack);
+    }
+}
+
+public class BookMyStayApp {
+
+    public static void main(String[] args) {
+
+        Inventory inventory = new Inventory();
+        inventory.addRoom("Single", 1);
+        inventory.addRoom("Suite", 0);
+
+        BookingHistory history = new BookingHistory();
+
+        history.addReservation(new Reservation("Single-1", "Single"));
+        history.addReservation(new Reservation("Suite-2", "Suite"));
+
+        CancellationService service = new CancellationService();
+
+        service.cancelBooking("Single-1", history, inventory); // valid
+        service.cancelBooking("XYZ-9", history, inventory);    // invalid
+
+        inventory.display();
+        service.showRollbackStack();
+    }
+}
